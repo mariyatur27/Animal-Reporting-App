@@ -4,8 +4,8 @@ import { supabase } from '../lib/supabase'
 import { Button, Input } from '@rneui/themed'
 import { Session } from '@supabase/supabase-js'
 import { Report , ReportInformation} from '../types'
-// import Geolocation from 'react-native-geolocation-service';
-import { loadBindings } from 'next/dist/build/swc'
+import * as Location from 'expo-location';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function CreateReport({ session }: { session: Session }) {
     const [reportData, setReportData] = useState({
@@ -16,23 +16,71 @@ export default function CreateReport({ session }: { session: Session }) {
         is_injured: false,
         condition: "",
     })
+    const [currentLocation, setCurrentLoaction] = useState("")
+
 
     useEffect(() => {
-        //get current location
-        // Geolocation.getCurrentPosition(
-        //     (position) => {
-        //         const {latitude, longitude} = position.coords;
-        //         console.log("POSITION: ", latitude, longitude)
-        //     },
-        //     (error) => {
-        //         console.log(error)
-        //     },
-        //     { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
-        // )
+         getCurrentLocation();
     }, [])
+
+    const getCurrentLocation = async() => {
+        try{
+            const {status} = await Location.requestForegroundPermissionsAsync();
+
+            if(status !== "granted") return
+
+            const location = await Location.getCurrentPositionAsync({});
+            const {latitude, longitude} = location.coords;
+            const address = await Location.reverseGeocodeAsync({latitude, longitude});
+
+            if(address.length > 0){
+                if(address[0].name != "" && address[0].city != "" && address[0].postalCode != ""){
+                    console.log(`${address[0].name}, ${address[0].city}, ${address[0].postalCode}`)
+                    setCurrentLoaction( `${address[0].name}, ${address[0].city}, ${address[0].postalCode}`)
+                    return
+                }
+            }
+
+            setCurrentLoaction(`${latitude}, ${longitude}`)
+        }catch(error){
+            console.log("ERROR: ", error)
+        }
+    }
+
+    const SubmitReport = async() => {
+
+    }
+
+    const uploadPhoto = async () => {
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsMultipleSelection: false,
+            allowsEditing: true,
+            quality: 1,
+            exif: false
+        })
+
+        console.log("IMAGE RESULTS 1: ", result)
+    }
+
+    const takePhoto = async () => {
+        const {status} = await ImagePicker.requestCameraPermissionsAsync();
+        if(status !== "granted") return
+
+        const result = await ImagePicker.launchCameraAsync({
+            allowsEditing: true,
+            quality: 1
+        })
+
+        console.log("IMAGE RESULTS 2: ", result)
+    }
 
     return(
         <View style={styles.container}>
+
+            <Button title="Upload Photo" onPress={() => uploadPhoto()}/>
+            <Button title="Take Photo" onPress={() => takePhoto()} />
+
             <Input
                 /* @ts-ignore */
                 onChangeText={(text:string) => setReportData({...reportData, species: text})}
@@ -64,6 +112,18 @@ export default function CreateReport({ session }: { session: Session }) {
                 placeholder="Condition"
                 autoCapitalize={'none'}
             />
+
+            {currentLocation && (
+                <Input
+                    /* @ts-ignore */
+                    onChangeText={(text:string) => setReportData({...reportData, location: text})}
+                    value={reportData.location}
+                    placeholder={currentLocation}
+                    autoCapitalize={'none'}
+                />
+            )}
+
+            <Button title="Report" onPress={async () => await SubmitReport()}/>
         </View>
     )
 }
@@ -74,5 +134,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
+    width: '80%'
   },
 });

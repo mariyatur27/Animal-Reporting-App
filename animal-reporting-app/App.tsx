@@ -8,6 +8,8 @@ import { Session } from '@supabase/supabase-js';
 import { supabase } from './lib/supabase'
 import ReportOverview from './components/ReportOverview';
 
+//Will use React Native Paper for UI
+
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null)

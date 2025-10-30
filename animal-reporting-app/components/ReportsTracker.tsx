@@ -16,6 +16,7 @@ export default function ReportsTracker({ session }: { session: Session }) {
     const [openOverview, setOpenOverview] = useState(false)
     const [targetId, setTargetId] = useState(-1)
     const [targetStatus, setTargetStatus] = useState("")
+    const [createReport, setCreateReport] = useState(false)
 
     useEffect(() => {
         if (session) {
@@ -54,7 +55,11 @@ export default function ReportsTracker({ session }: { session: Session }) {
         )
     }
 
-    // const targetOverview = (report)
+    if (createReport){
+        return(
+            <CreateReport session={session} />
+        )
+    }
 
     return(
         <View style={styles.container}>
@@ -83,7 +88,7 @@ export default function ReportsTracker({ session }: { session: Session }) {
                 <Text>You haven't made any reports yet!</Text>
             )}
             <View style={styles.reportButton}>
-                <Button title={"Report Animal"} onPress={() => CreateReport({session})}/>
+                <Button title={"Report Animal"} onPress={() => setCreateReport(true)}/>
             </View>
         </View>
     )
