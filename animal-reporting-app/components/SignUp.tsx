@@ -1,8 +1,8 @@
 import React, { useDebugValue, useState } from 'react'
-import { Alert, StyleSheet, View, AppState , Switch, Text} from 'react-native'
+import { Alert, StyleSheet, View, AppState} from 'react-native'
 import { supabase } from '../lib/supabase'
-import { Button, Input } from '@rneui/themed'
 import SignIn from './SignIn'
+import { SegmentedButtons , TextInput, Switch, Text, Button} from 'react-native-paper';
 
 // Tells Supabase Auth to continuously refresh the session automatically if
 // the app is in the foreground. When this is added, you will continue to receive
@@ -19,14 +19,25 @@ AppState.addEventListener('change', (state) => {
 export default function SignUp() {
   const [signin, setSignin] = useState(false)
   const [error, setError] = useState("")
+  const [isOrganization, setIsOrganization] = useState("")
+  const [shareInfo, setShareInfo] = useState("")
 
   const [userData, setUserData] = useState({
     firstName: "",
     lastName: "",
     email: "",
     password: "",
-    is_organization: false,
-    is_rescuer: false
+    is_organization: isOrganization === "organization" ? true : false,
+    is_rescuer: isOrganization === "individual" ? true : false
+  })
+
+  const [orgData, setOrgData] = useState({
+    orgName: "",
+    orgEmail: "",
+    location: "",
+    phoneNumber: "",
+    password: "",
+    canShareInfo: shareInfo === "Share contact info." ? true : false
   })
 
   async function signUp() {
@@ -35,24 +46,78 @@ export default function SignUp() {
         setError("One or more of the required input fields is empty!")
     }else{
         const { data: { session }, error } = await supabase.auth.signUp({
-        email: userData.email,
-        password: userData.password,
-        options: {
-            data: {
-                firstName: userData.firstName,
-                lastName: userData.lastName,
-                isOrganization: userData.is_organization,
-                isRescuer: userData.is_rescuer
-            }
-        }
+          email: userData.email,
+          password: userData.password,
+          options: {
+              data: {
+                  firstName: userData.firstName,
+                  lastName: userData.lastName,
+                  isOrganization: userData.is_organization,
+                  isRescuer: userData.is_rescuer
+              }
+          }
         })
 
         if (error) Alert.alert(error.message)
-        if (!session) Alert.alert('Please check your inbox for email verification!')
+
+        try{
+
+          const {error} = await supabase.from('Users').insert([
+            {first_name: userData.firstName, last_name: userData.lastName, email: userData.email, is_organization: false, is_rescuer: true}
+          ])
+
+          if(error){
+            Alert.alert(error.message)
+            return;
+          }
+
+        }catch(error){
+          console.log("ERROR: ", error)
+        }
     }
 
     if(error) Alert.alert(error)
 
+  }
+
+  async function SignUpOrganization(){
+    if( orgData.orgName == "" || orgData.orgEmail == "" || orgData.phoneNumber == "" || orgData.phoneNumber == "" || orgData.password == "") {
+        setError("One or more of the required input fields is empty!")
+    }else{
+        try{
+
+          const { data: { session }, error } = await supabase.auth.signUp({
+            email: orgData.orgEmail,
+            password: orgData.password,
+            })
+
+          try{
+
+            const {error} = await supabase.from('Organizations').insert([
+              {name: orgData.orgEmail, email: orgData.orgEmail, location: orgData.location, phone_number: orgData.phoneNumber, share_contact_info: orgData.canShareInfo}
+            ])
+
+            if(error){
+              Alert.alert(error.message)
+              return;
+            }
+
+          }catch(error){
+            console.log("ERROR: ", error)
+          }
+          
+          if(error){
+            Alert.alert(error.message)
+            return;
+          }
+
+        }catch(e){
+          console.log("ERROR: ", e)
+        }
+        
+    }
+
+    if(error) Alert.alert(error)
   }
 
 
@@ -60,78 +125,123 @@ export default function SignUp() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.verticallySpaced, styles.mt20]}>
-        <Input
-         /* @ts-ignore */
-          onChangeText={(text:string) => setUserData({...userData, firstName: text})}
-          value={userData.firstName}
-          placeholder="First name"
+
+        <SegmentedButtons
+          value={isOrganization}
+          onValueChange={setIsOrganization}
+          buttons={[
+            {
+              value: 'organization',
+              label: 'Organization',
+            },
+            {
+              value: 'individual',
+              label: 'Individual',
+            },
+          ]}
         />
+
+        {isOrganization == "organization" ? (
+          <View style={styles.form}>
+            <TextInput 
+              label="Organization name"
+              onChangeText={(text:string) => setOrgData({...orgData, orgName: text})}
+              value={orgData.orgName}
+              style={styles.textField}
+              mode='outlined'
+            />
+
+            <TextInput 
+              label="Organization email"
+              onChangeText={(text:string) => setOrgData({...orgData, orgEmail: text})}
+              value={orgData.orgEmail}
+              style={styles.textField}
+              mode='outlined'
+            />
+
+            <TextInput 
+              label="Phone number"
+              onChangeText={(text:string) => setOrgData({...orgData, phoneNumber: text})}
+              value={orgData.phoneNumber}
+              style={styles.textField}
+              mode='outlined'
+            />
+
+            <TextInput 
+              label="Password"
+              onChangeText={(text:string) => setOrgData({...orgData, password: text})}
+              value={orgData.password}
+              style={styles.textField}
+              secureTextEntry={true}
+              mode='outlined'
+            />
+
+            <TextInput 
+              label="Address"
+              onChangeText={(text:string) => setOrgData({...orgData, location: text})}
+              value={orgData.location}
+              style={styles.textField}
+              mode='outlined'
+            />
+
+            <View style={styles.dividedForm}>
+              <Text variant="bodyMedium" style={{width: '70%'}}>Can we share your contact information with rescuers?</Text>
+              <Switch value={orgData.canShareInfo} onValueChange={() => setOrgData({...orgData, canShareInfo: !orgData.canShareInfo})} />
+            </View>
+
+          </View>
+        ) : (
+
+        <View style={styles.form}>
+          <TextInput 
+              label="First name"
+              onChangeText={(text:string) => setUserData({...userData, firstName: text})}
+              value={userData.firstName}
+              style={styles.textField}
+              mode='outlined'
+          />
+
+          <TextInput 
+              label="Last name"
+              onChangeText={(text:string) => setUserData({...userData, lastName: text})}
+              value={userData.lastName}
+              style={styles.textField}
+              mode='outlined'
+          />
+
+          <TextInput 
+              label="Email"
+              onChangeText={(text:string) => setUserData({...userData, email: text})}
+              value={userData.email}
+              style={styles.textField}
+              mode='outlined'
+          />
+
+          <TextInput 
+              label="Password"
+              onChangeText={(text:string) => setUserData({...userData, password: text})}
+              value={userData.password}
+              style={styles.textField}
+              secureTextEntry={true}
+              mode='outlined'
+          />
+
+        </View>
+      )}
+
+      <View>
+        <Button onPress={() => {
+          if(isOrganization === "organization"){
+            SignUpOrganization()
+          }else{
+            signUp()
+          }
+        }}  mode='contained'>Sign Up</Button>
       </View>
-
-
       <View style={styles.verticallySpaced}>
-        <Input
-         /* @ts-ignore */
-          onChangeText={(text:string) => setUserData({...userData, lastName: text})}
-          value={userData.lastName}
-          placeholder="Last name"
-        />
+        <Button onPress={() => setSignin(true)}  mode='contained-tonal'>Sign In</Button>
       </View>
-
-      <View style={styles.verticallySpaced}>
-        <Input
-         /* @ts-ignore */
-          onChangeText={(text:string) => setUserData({...userData, email: text})}
-          value={userData.email}
-          placeholder="Email"
-          autoCapitalize={'none'}
-        />
-      </View>
-
-      <View style={styles.verticallySpaced}>
-        <Input
-         /* @ts-ignore */
-          onChangeText={(text:string) => setUserData({...userData, password: text})}
-          value={userData.password}
-          placeholder="Password"
-          secureTextEntry={true}
-          autoCapitalize={'none'}
-        />
-      </View>
-
-      <View style={[styles.verticallySpaced, styles.switchStyles]}>
-        <Text>Are you a part of an organization?</Text>
-        <Switch
-            trackColor={{ false: '#767577', true: '#7ed189ff' }}
-            thumbColor={userData.is_organization ? '#0c7a24ff' : '#f4f3f4'}
-            onValueChange={() => setUserData({...userData, is_organization: !userData.is_organization})}
-            value={userData.is_organization}
-        />
-      </View>
-
-      <View style={[styles.verticallySpaced, styles.switchStyles]}>
-        <Text>Are you an individual rescuer?</Text>
-        <Switch
-            trackColor={{ false: '#767577', true: '#7ed189ff' }}
-            thumbColor={userData.is_rescuer ? '#0c7a24ff' : '#f4f3f4'}
-            onValueChange={() => setUserData({...userData, is_rescuer: !userData.is_rescuer})}
-            value={userData.is_rescuer}
-        />
-      </View>
-
-
-      <View style={[styles.verticallySpaced, styles.mt20]}>
         
-        <Button 
-        /* @ts-ignore */
-        title="Sign up" onPress={() => signUp()} />
-      </View>
-      <View style={styles.verticallySpaced}>
-        <Button 
-         /* @ts-ignore */
-        title="Sign in" onPress={() => setSignin(true)} />
-      </View>
     </View>
   )
 }
@@ -147,14 +257,27 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
     alignSelf: 'stretch',
   },
-  mt20: {
-    marginTop: 20,
-  },
   switchStyles: {
     display: 'flex',
     justifyContent: 'space-between',
     width: '100%',
     flexDirection: 'row',
+    alignItems: 'center'
+  },
+  textField: {
+    width: '100%',
+    height: 50,
+  },
+  form: {
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  dividedForm: {
+    display: 'flex',
+    flexDirection: 'row',
+    gap: 2,
+    marginTop: 20,
+    justifyContent: 'space-between',
     alignItems: 'center'
   }
 })

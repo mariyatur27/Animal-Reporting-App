@@ -5,6 +5,8 @@ import { Button, Input } from '@rneui/themed'
 import { Session } from '@supabase/supabase-js'
 import { Report , ReportInformation} from '../types'
 import ReportsTracker from './ReportsTracker'
+import {Modal, Portal} from 'react-native-paper'
+import {Image} from 'react-native'
 
 export default function ReportOverview({ session , reportId, status}: { session: Session, reportId: number, status:string }) {
 
@@ -22,7 +24,8 @@ export default function ReportOverview({ session , reportId, status}: { session:
         sharePOC: false,
         orgEmail: "",
         orgPhone: "",
-        status: ""
+        status: "",
+        photoLink: "",
     })
 
     useEffect(() => {
@@ -54,6 +57,7 @@ export default function ReportOverview({ session , reportId, status}: { session:
                     condition: data[0].condition,
                     location: data[0].location,
                     status: data[0].ManageReports.status,
+                    photoLink: data[0].photo_link,
                 }));
                 
                 console.log("REPORT 1: ", report)
@@ -105,6 +109,10 @@ export default function ReportOverview({ session , reportId, status}: { session:
             {report && !loading ? (
                 <View>
                     <Text>Report Information</Text>
+                    <Image
+                        source={{ uri: report.photoLink }}
+                        style={{ width: 300, height: 300 }}
+                    />
                     <Text>Date: {report.date}</Text>
                     <Text>Animal: {report.species}</Text>
                     <Text>Color: {report.color}</Text>

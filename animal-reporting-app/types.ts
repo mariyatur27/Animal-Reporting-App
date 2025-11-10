@@ -1,7 +1,10 @@
+import { Session } from '@supabase/supabase-js'; // Import the Session type
+import { ReportStatusKey } from './constants';
+
 export type Report = {
     uid: string;
     report_id: number;
-    status: string;
+    status: ReportStatusKey;
     AnimalReports: {
         id: number;
         created_at: string;
@@ -42,4 +45,9 @@ export type ReportInformation = {
         phoneNumber: string;
         share_contact_info: boolean;
     }
+}
+
+export type StackParams = {
+    ReportsTracker: {session: Session};
+    SignUp: {}
 }

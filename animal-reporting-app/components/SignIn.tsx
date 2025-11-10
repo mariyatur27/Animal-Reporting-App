@@ -39,6 +39,15 @@ export default function SignIn() {
     if (error) Alert.alert(error)
   }
 
+  const resetPassword = async() => {
+    const { error } = await supabase.auth.signInWithOtp({email: userData.email});
+
+    if(error){
+      console.log("ERROR: ", error)
+      return
+    }
+  }
+
   if (signup) return (<SignUp />)
 
   return (
@@ -73,6 +82,11 @@ export default function SignIn() {
         <Button 
          /* @ts-ignore */
         title="Sign up"  onPress={() => setSignup(true)} />
+      </View>
+      <View style={styles.verticallySpaced}>
+        <Button 
+         /* @ts-ignore */
+        title="Forgot My Password :("  onPress={() => resetPassword(true)} />
       </View>
     </View>
   )
