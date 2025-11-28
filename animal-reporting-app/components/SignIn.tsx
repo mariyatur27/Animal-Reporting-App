@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
 import { Alert, StyleSheet, View, AppState } from 'react-native'
 import { supabase } from '../lib/supabase'
-import { Button, Input } from '@rneui/themed'
 import SignUp from './SignUp'
+import { SegmentedButtons , TextInput, Switch, Text, Button} from 'react-native-paper';
+
 
 // Tells Supabase Auth to continuously refresh the session automatically if
 // the app is in the foreground. When this is added, you will continue to receive
@@ -39,54 +40,36 @@ export default function SignIn() {
     if (error) Alert.alert(error)
   }
 
-  const resetPassword = async() => {
-    const { error } = await supabase.auth.signInWithOtp({email: userData.email});
-
-    if(error){
-      console.log("ERROR: ", error)
-      return
-    }
-  }
 
   if (signup) return (<SignUp />)
 
   return (
     <View style={styles.container}>
-      <View style={[styles.verticallySpaced, styles.mt20]}>
-        <Input
-         /* @ts-ignore */
+      <Text variant='headlineSmall'>Welcome back!</Text>
+      <View style={styles.form}>
+        <TextInput 
+          label="Email address"
           onChangeText={(text:string) => setUserData({...userData, email: text})}
           value={userData.email}
-          placeholder="Email address"
-          autoCapitalize={'none'}
+          style={styles.textField}
+          mode='outlined'
+        />
+
+        <TextInput 
+          label="Password"
+          onChangeText={(text:string) => setUserData({...userData, password: text})}
+          value={userData.password}
+          style={styles.textField}
+          mode='outlined'
+          secureTextEntry={true}
         />
       </View>
 
-      <View style={styles.verticallySpaced}>
-        <Input
-         /* @ts-ignore */
-          onChangeText={(text:string) => setUserData({...userData, password: text})}
-          value={userData.password}
-          secureTextEntry={true}
-          placeholder="Password"
-          autoCapitalize={'none'}
-        />
-      </View>
-      <View style={[styles.verticallySpaced, styles.mt20]}>
-        
-        <Button 
-        /* @ts-ignore */
-        title="Sign in"  onPress={() => signInWithEmail()} />
+      <View>
+        <Button onPress={() => signInWithEmail()}  mode='contained'>Sign in</Button>
       </View>
       <View style={styles.verticallySpaced}>
-        <Button 
-         /* @ts-ignore */
-        title="Sign up"  onPress={() => setSignup(true)} />
-      </View>
-      <View style={styles.verticallySpaced}>
-        <Button 
-         /* @ts-ignore */
-        title="Forgot My Password :("  onPress={() => resetPassword(true)} />
+        <Button onPress={() => setSignup(true)}  mode='contained-tonal'>Sign up</Button>
       </View>
     </View>
   )
@@ -98,12 +81,17 @@ const styles = StyleSheet.create({
     padding: 12,
     width: '80%'
   },
-  verticallySpaced: {
+   verticallySpaced: {
     paddingTop: 4,
     paddingBottom: 4,
     alignSelf: 'stretch',
   },
-  mt20: {
+  textField: {
+    width: '100%',
+    height: 50,
+  },
+  form: {
     marginTop: 20,
+    marginBottom: 20,
   },
 })

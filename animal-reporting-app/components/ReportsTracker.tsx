@@ -12,14 +12,15 @@ import SignIn from './SignIn'
 
 export default function ReportsTracker({ session }: { session: Session }) {
 
-    const [reports, setReports] = useState<Report[]>([])
+    const [reports, setReports] = useState<any[] | null>([])
     const [username, setUsername] = useState("")
     const [openOverview, setOpenOverview] = useState(false)
     const [targetId, setTargetId] = useState(-1)
-    const [targetStatus, setTargetStatus] = useState("")
     const [createReport, setCreateReport] = useState(false)
     const [page, setPage] = useState(0)
-    const [logout, setLogout] = useState(false)
+    const itemsPerPage = 10;
+    const [to, setTo] = useState<number>(-1)
+    const [from, setFrom] = useState<number>(-1)
 
     useEffect(() => {
         if (session) {
@@ -30,27 +31,34 @@ export default function ReportsTracker({ session }: { session: Session }) {
         }
     }, [session])
 
+    useEffect(() => {
+        if(reports){
+            setTo(Math.min((page + 1) * itemsPerPage, reports.length));
+            setFrom(page * itemsPerPage);
+        }
+
+    }, [reports])
+
     const getUserReports = async () => {
         try{
             if(!session?.user) throw new Error("No user on the session!")
-                        
-            const {data, error, status} = await supabase
-            .from("UserReports").select("*, AnimalReports(*)").eq("uid", session.user.id)
 
-            if(error){
-                console.log("ERROR: ", error)
-                return
-            }
+            const{data: userReports} = await supabase.from("UserReports").select("report_id").eq("uid", session.user.id)
 
-            if(data){
-                console.log("RESULTS: ", data)
-                const sortedData = data.sort((a, b) => {
-                const dateA = new Date(a.AnimalReports.created_at).getTime();
-                const dateB = new Date(b.AnimalReports.created_at).getTime();
-                return dateB - dateA; // newest first
-            });
-            setReports(sortedData);
+            if(userReports){
+                const idArr = userReports.map(obj => obj.report_id)
+                const {data} = await supabase.from("AnimalReports").select("*, ManageReports(*)").in("id", idArr)
 
+                if(data){
+                    console.log("RESULTS: ", data)
+                    const sortedData = data.sort((a, b) => {
+                        const dateA = new Date(a.created_at).getTime();
+                        const dateB = new Date(b.created_at).getTime();
+                        return dateB - dateA
+                    });
+                    console.log("SORTED: ", sortedData)
+                    setReports(sortedData);
+                }
             }
 
         }catch(error){
@@ -60,8 +68,10 @@ export default function ReportsTracker({ session }: { session: Session }) {
     }
 
     if (openOverview){
+        const targetReportDetails = reports?.filter(obj => obj.ManageReports.report_id == targetId)
+        console.log(targetReportDetails)
         return (
-        <ReportOverview session={session} reportId={targetId} status={targetStatus}/>
+            <ReportOverview session={session} reportData={targetReportDetails} org={false}/>
         )
     }
 
@@ -71,37 +81,13 @@ export default function ReportsTracker({ session }: { session: Session }) {
         )
     }
 
-    const itemsPerPage = 10;
-    const from = page * itemsPerPage;
-    const to = Math.min((page + 1) * itemsPerPage, reports.length);
-    
-    const LogOut = () => {
-        setLogout(true)
-        return null
-    }
-
-    const [index, setIndex] = React.useState(0);
-    const [routes] = React.useState([
-        { key: 'logout', title: 'Log Out', focusedIcon: 'logout'},
-    ]);
-
-    const renderScene = BottomNavigation.SceneMap({
-        logout: LogOut,
-    });
-
-    if(logout){
-        return <SignIn />
-    }
-
     return(
         <View style={styles.container}>
-            {username && (
-                <Appbar.Header>
-                    <Appbar.Content title="Reports Tracker"/>
-                </Appbar.Header>
-            )}
+            <Appbar.Header>
+                <Appbar.Content title="Reports Tracker"/>
+            </Appbar.Header>
             <View style={styles.mainPage}>
-                {reports.length > 0 ? (
+                {reports && to > -1 && from > -1 && reports.length > 0 ? (
                     <DataTable style={styles.table}>
                         <DataTable.Header>
                             <DataTable.Title style={{flex: 1}}>ID</DataTable.Title>
@@ -110,15 +96,14 @@ export default function ReportsTracker({ session }: { session: Session }) {
                         </DataTable.Header>
 
                         {reports.slice(from, to).map((item, index, arr) => (
-                            <DataTable.Row key={item.report_id} style={index === arr.length - 1 && {borderBottomWidth: 0}} onPress={() => {
-                                setTargetId(item.report_id);
-                                setTargetStatus(item.status);
+                            <DataTable.Row key={item.ManageReports.report_id} style={index === arr.length - 1 && {borderBottomWidth: 0}} onPress={() => {
+                                setTargetId(item.ManageReports.report_id);
                                 setOpenOverview(true)
                             }}>
-                                <DataTable.Cell style={{flex: 1}}>{item.report_id}</DataTable.Cell>
-                                <DataTable.Cell style={{flex: 2}}>{item.AnimalReports.created_at.split("T")[0]}</DataTable.Cell>
+                                <DataTable.Cell style={{flex: 1}}>{item.ManageReports.report_id}</DataTable.Cell>
+                                <DataTable.Cell style={{flex: 2}}>{item.created_at.split("T")[0]}</DataTable.Cell>
                                 <DataTable.Cell style={{flex: 3}}>
-                                    <Chip style={{backgroundColor: ReportStatus[item.status] || '#BCE0BE'}}>{item.status}</Chip>
+                                    <Chip style={{backgroundColor: '#BCE0BE'}}>{item.ManageReports.status}</Chip>
                                 </DataTable.Cell>
                             </DataTable.Row>
                         ))}
@@ -144,13 +129,7 @@ export default function ReportsTracker({ session }: { session: Session }) {
             <View style={styles.lowerSection}>
                 <FAB label="Report" style={styles.fab} onPress={() => setCreateReport(true)} />
             </View>
-            
-            {/* 
-            <BottomNavigation
-                navigationState={{ index, routes }}
-                onIndexChange={setIndex}
-                onPress={renderScene}
-            /> */}
+        
         </View>
     )
 }
@@ -162,13 +141,15 @@ const styles = StyleSheet.create({
   },
   mainPage: {
     display: 'flex',
+    marginTop: 20,
     flexDirection: 'column',
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
+    alignContent: 'center',
   },
   lowerSection: {
     position: 'absolute',
-    bottom: 100,
+    bottom: 150,
     alignItems: 'center',
     width: '100%'
   },

@@ -1,4 +1,4 @@
-import React, { useDebugValue, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Alert, StyleSheet, View, AppState} from 'react-native'
 import { supabase } from '../lib/supabase'
 import SignIn from './SignIn'
@@ -19,16 +19,15 @@ AppState.addEventListener('change', (state) => {
 export default function SignUp() {
   const [signin, setSignin] = useState(false)
   const [error, setError] = useState("")
-  const [isOrganization, setIsOrganization] = useState("")
-  const [shareInfo, setShareInfo] = useState("")
+  const [isOrganization, setIsOrganization] = useState("individual")
 
   const [userData, setUserData] = useState({
     firstName: "",
     lastName: "",
     email: "",
     password: "",
-    is_organization: isOrganization === "organization" ? true : false,
-    is_rescuer: isOrganization === "individual" ? true : false
+    is_organization: isOrganization === "organization",
+    is_rescuer: isOrganization === "individual"
   })
 
   const [orgData, setOrgData] = useState({
@@ -37,15 +36,23 @@ export default function SignUp() {
     location: "",
     phoneNumber: "",
     password: "",
-    canShareInfo: shareInfo === "Share contact info." ? true : false
+    canShareInfo: true
   })
+
+  useEffect(() => {
+    setUserData(prev => ({
+      ...prev,
+      is_organization: isOrganization === "organization",
+      is_rescuer: isOrganization === "individual"
+    }))
+  }, [isOrganization])
 
   async function signUp() {
 
     if( userData.email == "" || userData.firstName == "" || userData.lastName == "" || userData.password == "") {
         setError("One or more of the required input fields is empty!")
     }else{
-        const { data: { session }, error } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
           email: userData.email,
           password: userData.password,
           options: {
@@ -86,29 +93,34 @@ export default function SignUp() {
     }else{
         try{
 
-          const { data: { session }, error } = await supabase.auth.signUp({
+          const { data, error:signUpError } = await supabase.auth.signUp({
             email: orgData.orgEmail,
             password: orgData.password,
+            options: {
+              data: {
+                  isOrganization: userData.is_organization,
+                }
+              }
             })
 
-          try{
+          if(signUpError){
+            Alert.alert(signUpError.message)
+            return;
+          }
 
-            const {error} = await supabase.from('Organizations').insert([
-              {name: orgData.orgEmail, email: orgData.orgEmail, location: orgData.location, phone_number: orgData.phoneNumber, share_contact_info: orgData.canShareInfo}
+          const user = data?.user
+
+          if(user){
+            const {error:insertError} = await supabase.from('Organizations').insert([
+              {name: orgData.orgEmail, email: orgData.orgEmail, location: orgData.location, phone_number: orgData.phoneNumber, share_contact_info: orgData.canShareInfo,
+                user_id: user.id
+              }
             ])
 
-            if(error){
-              Alert.alert(error.message)
+            if(insertError){
+              Alert.alert(insertError.message)
               return;
             }
-
-          }catch(error){
-            console.log("ERROR: ", error)
-          }
-          
-          if(error){
-            Alert.alert(error.message)
-            return;
           }
 
         }catch(e){
