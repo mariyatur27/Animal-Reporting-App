@@ -64,6 +64,8 @@ export default function CreateReport({ session }: { session: Session }) {
                 reportData
             ]).select('*')
 
+            //to do: add to manageReports as well
+
             if(error){
                 console.log("ERROR: ", error);
                 return

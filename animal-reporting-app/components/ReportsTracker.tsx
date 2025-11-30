@@ -46,7 +46,7 @@ export default function ReportsTracker({ session }: { session: Session }) {
             const{data: userReports} = await supabase.from("UserReports").select("report_id").eq("uid", session.user.id)
 
             if(userReports){
-                const idArr = userReports.map(obj => obj.report_id)
+                const idArr = userReports.map(obj => obj?.report_id)
                 const {data} = await supabase.from("AnimalReports").select("*, ManageReports(*)").in("id", idArr)
 
                 if(data){
@@ -67,7 +67,7 @@ export default function ReportsTracker({ session }: { session: Session }) {
         }
     }
 
-    if (openOverview){
+    if (openOverview && reports){
         const targetReportDetails = reports?.filter(obj => obj.ManageReports.report_id == targetId)
         console.log(targetReportDetails)
         return (
@@ -95,7 +95,7 @@ export default function ReportsTracker({ session }: { session: Session }) {
                             <DataTable.Title style={{flex: 3}}>Status</DataTable.Title>
                         </DataTable.Header>
 
-                        {reports.slice(from, to).map((item, index, arr) => (
+                        {reports && reports.slice(from, to).map((item, index, arr) => (
                             <DataTable.Row key={item.ManageReports.report_id} style={index === arr.length - 1 && {borderBottomWidth: 0}} onPress={() => {
                                 setTargetId(item.ManageReports.report_id);
                                 setOpenOverview(true)
